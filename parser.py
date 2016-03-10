@@ -1,9 +1,9 @@
 import numpy as np
 import os,sys
-from ML.descriptors import CoulombMatrix as cm
+from ML_SK.descriptors import CoulombMatrix as cm
 import re
 
-from ML.descriptors import Obj_CM
+from ML_SK.descriptors import Obj_CM
 
 
 def grep_elem(elem,datafile):

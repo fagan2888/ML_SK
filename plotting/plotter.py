@@ -1,9 +1,9 @@
 
 import numpy as np
 import os,sys
-from ML.descriptors import CoulombMatrix as cm
-import ML.parser
-from ML.plotting import plots
+from ML_SK.descriptors import CoulombMatrix as cm
+import ML_SK.parser  
+from ML_SK.plotting import plots
 
 
 def plot_CM(data_file,target_element,cut_off,ParseLength):
@@ -45,7 +45,7 @@ def plot_results(y,ypred,model,train_size,plot):
     plot_pred = True;  plot_coeff = True; plot_histo = True
   
   if plot_pred==True:
-    ML.plotting.plots.common_plot(y[train_size:],ypred,'Title',\
+    ML_SK.plotting.plots.common_plot(y[train_size:],ypred,'Title',\
                                   diag='diag',prediction=True)
   
   if plot_coeff==True:
@@ -54,10 +54,10 @@ def plot_results(y,ypred,model,train_size,plot):
     else:
       coeffs=np.array(model.coef_)
     coeffs.sort()
-    ML.plotting.plots.common_plot(np.arange(len(coeffs)),coeffs,'Weights')
+    ML_SK.plotting.plots.common_plot(np.arange(len(coeffs)),coeffs,'Weights')
  
   if plot_histo==True:
-    ML.plotting.plots.plot_histo(y[1:],'Full dataset',\
+    ML_SK.plotting.plots.plot_histo(y[1:],'Full dataset',\
                                  y[1:train_size],'Training set',\
                                  train_size)
 

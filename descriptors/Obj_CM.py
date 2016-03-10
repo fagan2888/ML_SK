@@ -1,5 +1,5 @@
 import numpy as np
-from ML.descriptors import CoulombMatrix as cmf
+from ML_SK.descriptors import CoulombMatrix as cmf
 
 
 

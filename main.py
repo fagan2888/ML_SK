@@ -19,15 +19,11 @@ import ML_SK.plotting.plotter
 
 
 
-data_file      = 'data_atomicenergies.dat'
-parsed_folder  = 'DATASETS/Partial_energies/'
-
-#data_file      = 'data_GDB9_atomicenergies.dat'
-#parsed_folder  = 'DATASETS/GDB9_partial_energies/'
-
+data_file      = '../DS/data_charges.dat'
+parsed_folder  = '../DS/PARSED/Charges/'
 
 target_element = 'O'
-train_size     = 3000       #in Molecules.
+train_size     = 300       #in Molecules.
 larger_mol     = 29       #Largest molecule in the dataset.
 atomic_cut_off = 19.      #Cut_off used to parse the dataset.
 cut_off_extra  = 9       #Applies a cut_off to the linear CM.
@@ -55,7 +51,7 @@ plot_CM        = False    #Plot the Coulomb matrix ParseLength and exit.
 
 
 
-cut_off_extra=ML.parser.atomic_cut_off2cut_off(cut_off_extra)
+cut_off_extra=ML_SK.parser.atomic_cut_off2cut_off(cut_off_extra)
 
 
 if target_element == 'O': train_size= 2*train_size; nspec= 2
@@ -67,9 +63,9 @@ if target_element == 'H': train_size=10*train_size; nspec=10
 ############################################################################
 
 if plot_CM == True:
-  ML.plotting.plotter.plot_CM(data_file,target_element,2.9,6000)
+  ML_SK.plotting.plotter.plot_CM(data_file,target_element,2.9,6000)
 
-parsed_data=ML.parser.parse_data(data_file,parsed_folder,target_element,descriptor,\
+parsed_data=ML_SK.parser.parse_data(data_file,parsed_folder,target_element,descriptor,\
                                  atomic_cut_off,larger_mol,load_parsed)
 
 X=parsed_data[0][:,:cut_off_extra]
@@ -100,7 +96,7 @@ else:
 #Histogram of data
 if fast_histo==True:
   print '\nHistogram and exit'
-  ML.plotting.plots.plot_histo(y[1:],'All dataset',\
+  ML_SK.plotting.plots.plot_histo(y[1:],'All dataset',\
                                y[1:train_size+1],'Training sets',\
                                train_size)
   exit()
@@ -147,10 +143,10 @@ print 'MAE       = %12.6f '  % (mean_absolute_error(y[train_size:],ypred))   ,\
 ########################### Plotting results ###############################
 ############################################################################
 
-ML.plotting.plotter.plot_results(y,ypred,model,train_size,plot)
+ML_SK.plotting.plotter.plot_results(y,ypred,model,train_size,plot)
 
 ############################################################################
 ####################### Save predictions to file ###########################
 ############################################################################
 
-ML.parser.save_prediction(y,ypred,model,train_size)
+ML_SK.parser.save_prediction(y,ypred,model,train_size)
