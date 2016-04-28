@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH --partition=coms
+#SBATCH --time=24:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=10gb
+#SBATCH --output=/dev/null
+#SBATCH --error=/dev/null
+
+JOBSPERCPU=1
+export OMP_NUM_THREADS=1
+
+ppserver.py -a -n -1 -w $JOBSPERCPU -t 100000 -k 100000
