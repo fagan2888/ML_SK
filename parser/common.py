@@ -2,6 +2,8 @@ import numpy as np
 from ML_SK.descriptors import Obj_CM
 # TODO test if dill should be used instead of cPickle
 import cPickle as pickle
+import time
+import sys
 
 def grep_elem(elem,datafile):
   """Tells how many atoms of element 'elem' are in datafile"""
@@ -90,19 +92,37 @@ def parse_atomic_data(data_filenames, settings):
     comb_descriptor = []
     comb_observables = []
     molecule_indices = dict([(x,[]) for x in range(len(data_filenames))])
+    t = np.zeros(1,dtype=np.float128)
     c = 0 # counts the current number of elements
+    t1 = time.time()
     for i, fname in enumerate(data_filenames):
+        tokens = fname.split("/")[-1].split("_")[:2][::-1]
         # keep track of which indices a new molecule starts at,
         # so we make sure that we don't have contamination
         # between training and test dataset
         with open(fname) as f:
             lines = f.readlines()
-            data = [line.split() for line in lines[2:]]
-            descriptor, observables = descr.f(data, settings)
-            comb_descriptor.extend(descriptor)
+            if sys.argv[5] == "CM":
+                data = [line.split() for line in lines[2:]]
+                descriptor, observables = descr.f(data, settings)
+                comb_descriptor.extend([descriptor[int(sys.argv[1])]-1])
+            else:
+                count = 0
+                coords = []
+                for line in lines:
+                    tokens = line.split()
+                    if tokens[-1] == "CA":
+                        coords.append(np.asarray(tokens[1:4],dtype=float))
+                coords = np.asarray(coords)
+                dist_vector = np.sum((coords-coords[int(sys.argv[1])-1])**2,axis=1)**0.5
+                comb_descriptor.append(dist_vector)
+                observables = [["CA"]*56]
+            #comb_descriptor.extend(descriptor)
+            if (~np.isfinite(comb_descriptor[-1])).any():
+                quit(fname)
             comb_observables.extend(observables)
         molecule_indices[i] = range(c,len(comb_descriptor))
-        c = len(comb_descriptor) - 1
+        c = len(comb_descriptor)
     descriptor = np.asarray(comb_descriptor)
     observables = np.asarray(comb_observables)
 

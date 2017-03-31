@@ -1,10 +1,8 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 from itertools import permutations, product
-from utils import Settings
+import time
 
-# TODO finish bobh #M
-# TODO quippy descriptors #L
 
 # define atom weights
 atom_weights = {'H':1,'C':6,'N':7,'O':8,'F':9,'S':16}
@@ -74,6 +72,9 @@ def cmatrix_sorted_rows(data, settings):
 def cos_damp(r,r_cut,*args):
     return np.piecewise(r,[r<r_cut, r>=r_cut], [0.5 + 0.5*np.cos(np.pi*r/r_cut),0])
 
+def hard_damp(r,r_cut,*args):
+    return np.piecewise(r,[r<r_cut, r>=r_cut], [1,0])
+
 def damp(r,r_cut,alpha, dr):
     return np.piecewise(r,[r<r_cut-dr, (r>=r_cut-dr) & (r<r_cut), r>=r_cut], [1,lambda r:2*((r-r_cut)/dr)**3 + 3*((r-r_cut)/dr)**2,0])
 
@@ -108,11 +109,10 @@ def set_fc(dampening):
         fc = smooth_norm_damp
     elif dampening == 'smooth_laplace':
         fc = smooth_laplace_damp
+    elif dampening == 'hard':
+        fc = hard_damp
     return fc
 ### end functions for dampening ###
-
-# TODO molecular observables
-# TODO add more cutoffs
 
 ## bag of bonds histogram proposed in EDIC-ru/05.05.2009
 ## TODO finish # M
@@ -203,17 +203,16 @@ def cmatrix_sorted_distance(data, settings):
     """
     Returns variants of the local sorted Coulomb matrix (CM).
     """
-    dtype = np.float
     #define dampening function
     fc = set_fc(settings.dampening)
     fc2 = set_fc(settings.dampening2)
     # coordinates
     data = np.asarray(data)
-    coords = data[:,1:4].astype(dtype)
+    coords = data[:,1:4].astype(np.float)
     if settings.mulliken:
         # use mulliken charges
         z = np.matrix([atom_weights[x] for x in data[:,0]])
-        charges = np.asmatrix(data[:,5],dtype=dtype)
+        charges = np.asmatrix(data[:,4+settings.mulliken],dtype=np.float)
         z2 = z.T * z - 0.5*(z.T*charges + charges.T*z) + charges.T*charges
         
     else:
@@ -225,6 +224,8 @@ def cmatrix_sorted_distance(data, settings):
 
     # get observables for selected element
     observables = data[elem_indices,4:]
+    elem_indices = elem_indices[np.where(observables[:,0] == "CA")]
+    observables = observables[np.where(observables[:,0] == "CA")]
 
     # optional use of the reduced coulomb matrix
     # See later for further details
@@ -237,6 +238,7 @@ def cmatrix_sorted_distance(data, settings):
     else:
         CMs = np.zeros((len(elem_indices),(settings.max_neighbours*(settings.max_neighbours+1))/2))
     for e, ei in enumerate(elem_indices):
+        t0 = time.time()
 
         # coordinates relative to the head atom
         relative_coords = coords - coords[ei]
@@ -255,30 +257,22 @@ def cmatrix_sorted_distance(data, settings):
         if settings.sncf:
             # create sncf distance vector
             R = np.zeros((N_neighbours,N_neighbours))
-            for i, Ri in enumerate(coords[sort_indices]):
-                for j, Rj in enumerate(coords[sort_indices][i:]):
-                    R[i,j+i] = (np.mean(relative_coords[i]**2)**0.5 \
-                             + np.mean(relative_coords[i+j]**2)**0.5 \
-                             + np.mean((Ri-Rj)**2)**0.5) ** settings.exponent
-                    with np.errstate(divide='ignore'): # ignore divide by zero warnings
-                        R[i,j+i] /= (fc(relative_coords[i],settings.cut_off,settings.damp_const1,settings.damp_const2)*
-                                     fc(relative_coords[i+j],settings.cut_off,settings.damp_const1,settings.damp_const2)*
-                                     fc2(Ri-Rj,settings.cut_off2,settings.damp2_const1,settings.damp2_const2))
-                    R[i+j,i] = R[i,i+j]
+            R = (np.sum(relative_coords[:,None]**2,axis = 2)**0.5 \
+               + np.sum(relative_coords[None,:]**2,axis = 2)**0.5 \
+               + np.sum((relative_coords[:,None]-relative_coords[None,:])**2,axis=2)**0.5) ** settings.exponent
         else:
             # create euclidian distance vector
             R = cdist(relative_coords, relative_coords)**settings.exponent
-            # dampening
-            for i, Ri in enumerate(coords[sort_indices]):
-                for j, Rj in enumerate(coords[sort_indices][i:]):
-                    with np.errstate(divide='ignore'): # ignore divide by zero warnings
-                        R[i,j+i] /= (fc(relative_coords[i],settings.cut_off,settings.damp_const1,settings.damp_const2)*
-                                     fc(relative_coords[i+j],settings.cut_off,settings.damp_const1,settings.damp_const2)*
-                                     fc2(Ri-Rj,settings.cut_off2,settings.damp2_const1,settings.damp2_const2))
-                    R[i+j,i] = R[i,i+j]
+
+        # dampening
+        R /= (fc(np.sum(relative_coords[:,None]**2,axis = 2)**0.5,settings.cut_off,settings.damp_const1,settings.damp_const2)*
+                fc(np.sum(relative_coords[None,:]**2,axis = 2)**0.5,settings.cut_off,settings.damp_const1,settings.damp_const2)*
+                fc2(np.sum((relative_coords[:,None]-relative_coords[None,:])**2,axis=2)**0.5,settings.cut_off2,settings.damp2_const1,settings.damp2_const2))
+
         # inverse distance
         with np.errstate(divide='ignore'): # ignore divide by zero warnings
             invR = 1./R
+
 
         # calculate coulomb matrix
         s = sort_indices[np.mgrid[0:N_neighbours,0:N_neighbours]]
@@ -286,13 +280,12 @@ def cmatrix_sorted_distance(data, settings):
         CM = np.einsum('ij,ij->ij',invR,weights)
 
         diagonal_weights = settings.self_energy_fn(np.sqrt(np.asarray(weights.diagonal())))
-        if settings.double_diagonal:
-            # set diagonal elements to Z^(2.4)
-            np.fill_diagonal(CM,diagonal_weights)
-        else:
+        if settings.sncf == False:
             # set diagonal elements to 0.5*Z^(2.4)
             # note that weights.diagonal corresponds to z^2
-            np.fill_diagonal(CM,0.5*diagonal_weights)
+            np.fill_diagonal(CM,diagonal_weights)
+        else:
+            CM[0,0] = settings.self_energy_fn(weights.diagonal()[0,0]**0.5)
 
         # cut_off low values in the matrix
         CM[CM < settings.cm_cut] = 0
@@ -357,6 +350,7 @@ def cmatrix_sorted_distance(data, settings):
 
 if __name__ == "__main__":
     # for internal testing
+    from ML_SK.utils import Settings
     data = np.array([['C', '7.56873937876', '3.68060597047', '6.33261784125','123','5.8'],
                      ['C', '2.87980609339', '6.93282733005', '2.13562892849','153','6.2'],
                      ['H', '7.93736430134', '1.20064913896', '6.02568213786','3','1.1'],
@@ -368,6 +362,6 @@ if __name__ == "__main__":
     settings.target_element = "C"
     settings.cut_off = 5.0
     settings.max_neighbours = 6
+    settings.sncf = True
     #settings.max_neighbours_dict = dict([(('C','C'),6),(('C','H'),3),(('C','N'),3),(('N','N'),3),(('N','H'),3),(('H','H'),3)]),
-    settings.mulliken = True
     cmatrix_sorted_distance(data, settings)

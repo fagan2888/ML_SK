@@ -3,6 +3,4 @@
 
 # ignore external, data, plots and output folders for now
 external/
-data/
-output/
-plots/
+data/raw_data.tar.bz2

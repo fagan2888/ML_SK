@@ -2,7 +2,8 @@ import os
 import hashlib
 import collections
 
-import ML_SK.parser.common
+from ML_SK.parser import common
+import time
 
 def convert_to_md5(data_filenames, settings):
     """
@@ -26,15 +27,15 @@ def parse_data(data_filenames, settings):
     Finally saves the data in a pickle.
     '''
 
-    md5 = convert_to_md5(data_filenames, settings)
+    md5 = settings.md5_data
 
     # if pickle already exist, then load it.
-    pickle_path = settings.output_folder + "/" + md5 + ".pickle"
+    pickle_path = settings.data_pickle_folder + "/" + md5 + ".pickle"
     if os.path.isfile(pickle_path):
         if settings.verbose:
             print "Loading pickle"
         descriptor, observables, molecule_indices = \
-            ML_SK.parser.common.load_parsed_data(pickle_path)
+            common.load_parsed_data(pickle_path)
         if settings.verbose:
             print "Loaded {} molecules having {} {}-atoms".format(
                     len(molecule_indices),descriptor.shape[0], settings.target_element)
@@ -44,14 +45,15 @@ def parse_data(data_filenames, settings):
         print 'Parsing data'
 
     descriptor, observables, molecule_indices = \
-            ML_SK.parser.common.parse_atomic_data(data_filenames, settings)
+            common.parse_atomic_data(data_filenames, settings)
 
-    if settings.verbose:
+    if settings.verbose >= 1:
         print "Parsed {} molecules having {} {}-atoms".format(
                 len(molecule_indices),descriptor.shape[0], settings.target_element)
 
-    if settings.verbose:
-        print "Saving pickle"
-    ML_SK.parser.common.save_parsed_data((descriptor, observables, molecule_indices),pickle_path)
+    if settings.save_data_pickle:
+        if settings.verbose >= 1:
+            print "Saving pickle"
+        common.save_parsed_data((descriptor, observables, molecule_indices),pickle_path)
 
     return descriptor, observables, molecule_indices

@@ -5,13 +5,13 @@ from ML_SK.descriptors import CoulombMatrix as cmf
 
 class CM_Atomic(object):
 
-    def f(self, data, settings):
+    def f(self, data, settings,t):
         """
         Returns the Coulomb matrices (CM) of all atoms of element 'elem'
         in the molecule.
         The output is a 1d array descriptor with size depending on the options given
         """
-        descriptor, properties = cmf.cmatrix_sorted_distance(data, settings)
+        descriptor, properties = cmf.cmatrix_sorted_distance(data, settings,t)
 
         return descriptor, properties
 

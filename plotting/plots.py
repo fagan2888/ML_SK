@@ -1,44 +1,38 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as ss
 import matplotlib.cm as cm
 
-def plot_matrix(data,label=None):
-  fig = plt.figure()
-  ax = fig.add_subplot(111)
-  cax = ax.matshow(data)
-  fig.colorbar(cax)
+def plot_points(X, Y, ax = plt, plot_line=True, label = "", inp = None):
+    '''
+    Plots sets of points
+    '''
+    if inp == "list":
+        for i in range(len(X)):
+            ax.plot(X[i],Y[i],".", ms=4, label=label)
+    else:
+        ax.plot(X,Y,".", ms=4, label=label)
 
-  #ax.set_xticklabels(label)
-  #ax.set_yticklabels(label)
-  plt.show()
+    if plot_line:
+        if inp == "list":
+            line = ([np.min(np.concatenate(X))]*2,[np.max(np.concatenate(X))]*2)
+        else:
+            line = ([np.min(X)]*2,[np.max(X)]*2)
+
+        #print line
+        #ax.plot(*line,linestyle="--",c="k",lw=0.5)
+        ax.plot(*line,linestyle="-",c="k",lw=10.5)
 
 
-def plot_histo(x,str_x,y,str_y,train_size):
-  '''Plots a two-panel histogram'''
-  bins = np.linspace(x.min(), x.max(), 140)
-  plt.figure(1)
-  plt.subplot(211); plt.title(str_x); plt.hist(x,bins); plt.xlim(([x.min(),x.max()]))
-  plt.subplot(212); plt.title(str_y); plt.hist(y,bins); plt.xlim(([x.min(),x.max()]))
-  plt.show()
-
-def plot_kde(x,title, show = False, save = True):
+def plot_kde(x,ax,clip=None,color=None):
+    import seaborn as sns
     '''Plots an 1D Kernel Density Estimate'''
-    if show+save == 0:
-        return
-    grid = np.linspace((x.min()-x.mean())*1.1, (x.max()-x.mean())*1.1, 1000) + x.mean()
-    kde = ss.gaussian_kde(x)
-    y = kde(grid)
-
-    plt.plot(grid, y, c="b")
-    plt.fill_between(grid, y, color="b", alpha=0.1)
-    plt.title(title)
-    if show:
-        plt.show()
-    if save:
-        plt.savefig("plots/" + title, dpi=300)
-        plt.clf()
+    ax.grid(False)
+    kde = sns.kdeplot(x,ax=ax, gridsize=1000,clip=clip,color=color) #clip, cut, 
+    sns.kdeplot(x,ax=ax,shade=True, alpha=0.1, color=color, gridsize=1000,clip=clip) #clip, cut, 
+    ax.set_ylabel("Density")
+    sns.despine(ax=ax)
+    plt.gca().axes.get_yaxis().set_ticks([])
 
 
 def common_plot(x,y,str_x,diag=None,prediction=False):
@@ -90,9 +84,8 @@ def plot_labels(x,y,z,str_x, show=False, save=True):
         plt.clf()
 
 
-def plot_scatter(x,y,str_x, show=False, save=True):
-    if show+save == 0:
-        return
+def plot_scatter(x,y,str_x="", show=False):
+    import seaborn as sns
     plt.title(str_x)
 
     plt.scatter(x, y)
@@ -111,6 +104,6 @@ def plot_scatter(x,y,str_x, show=False, save=True):
     plt.xlim(xlim)
     if show:
         plt.show()
-    if save:
+    else:
         plt.savefig("plots/" + str_x, dpi=300)
         plt.clf()

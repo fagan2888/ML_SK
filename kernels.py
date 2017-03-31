@@ -1,6 +1,8 @@
 import numpy as np
 import math
 from sklearn.metrics.pairwise import check_pairwise_arrays,manhattan_distances
+from sklearn.utils import gen_even_slices
+from sklearn.externals.joblib import delayed, Parallel
 
 
 def LaplacianKernel(X, Y=None, gamma=None):
@@ -25,7 +27,10 @@ def GeneralizedNormalKernel(X, Y=None, gamma = None, beta = 1):
     if gamma is None:
         gamma = 1.0 / X.shape[1]
 
-    K = -gamma * manhattan_distances(X, Y) ** beta
+    if beta == 1:
+        K = -gamma * manhattan_distances(X, Y)
+    else:
+        K = -gamma * manhattan_distances(X, Y) ** beta
     np.exp(K, K)    # exponentiate K in-place
     return K
 
